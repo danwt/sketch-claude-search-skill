@@ -1,5 +1,12 @@
 # Claude Search Skill
 
+[![GitHub stars](https://img.shields.io/github/stars/danwt/sketch-claude-search-skill?style=flat-square)](https://github.com/danwt/sketch-claude-search-skill/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/danwt/sketch-claude-search-skill?style=flat-square)](https://github.com/danwt/sketch-claude-search-skill/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/danwt/sketch-claude-search-skill?style=flat-square)](https://github.com/danwt/sketch-claude-search-skill/issues)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+[![Docker](https://img.shields.io/badge/Docker-ready-blue?style=flat-square&logo=docker)](https://www.docker.com/)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-blueviolet?style=flat-square)](https://claude.ai/claude-code)
+
 > Self-hosted web search and scraping for Claude Code with smart LLM compression
 
 A local Docker stack that gives Claude Code powerful web search and scraping capabilities without relying on external MCP servers. Uses SearXNG (meta-search across 70+ engines) and Crawl4AI (Playwright-based scraping) with an optional compression layer that lets Claude control how much detail to retrieve.
