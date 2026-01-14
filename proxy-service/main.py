@@ -31,7 +31,7 @@ app = FastAPI(
 class CrawlRequest(BaseModel):
     url: HttpUrl
     compress: bool = False
-    max_tokens: int = 500
+    instruction: str = "summarize briefly"
     # Pass-through options for Crawl4AI
     extraction_strategy: str = "auto"
     timeout: int = 30
@@ -71,7 +71,7 @@ async def health_check() -> HealthResponse:
 async def search(
     q: str = Query(..., description="Search query"),
     compress_response: bool = Query(False, alias="compress", description="Compress results via LLM"),
-    max_tokens: int = Query(500, description="Target tokens for compression"),
+    instruction: str = Query("summarize briefly", description="Natural language instruction for compression"),
     # Pass-through params for SearXNG
     format: str = Query("json", description="Response format"),
     categories: Optional[str] = Query(None, description="Search categories"),
@@ -106,14 +106,15 @@ async def search(
     data = response.json()
 
     if compress_response and data.get("results"):
-        logger.info(f"Compressing search results to {max_tokens} tokens")
+        logger.info(f"Compressing search results with instruction: {instruction}")
         try:
             raw_content = json.dumps(data["results"], indent=2)
-            compressed = await compress(raw_content, max_tokens)
+            compressed = await compress(raw_content, instruction)
             return JSONResponse({
                 "query": data.get("query"),
                 "compressed": True,
-                "summary": compressed,
+                "instruction": instruction,
+                "result": compressed,
                 "original_result_count": len(data.get("results", [])),
             })
         except Exception as e:
@@ -151,13 +152,14 @@ async def crawl(request: CrawlRequest):
     data = response.json()
 
     if request.compress and data.get("markdown"):
-        logger.info(f"Compressing crawl results to {request.max_tokens} tokens")
+        logger.info(f"Compressing crawl results with instruction: {request.instruction}")
         try:
-            compressed = await compress(data["markdown"], request.max_tokens)
+            compressed = await compress(data["markdown"], request.instruction)
             return JSONResponse({
                 "url": str(request.url),
                 "compressed": True,
-                "summary": compressed,
+                "instruction": request.instruction,
+                "result": compressed,
                 "metadata": data.get("metadata", {}),
             })
         except Exception as e:
@@ -174,7 +176,7 @@ async def root():
         "version": "1.0.0",
         "endpoints": {
             "health": "/health",
-            "search": "/search?q=query[&compress=true&max_tokens=500]",
+            "search": "/search?q=query[&compress=true&instruction=summarize briefly]",
             "crawl": "/crawl (POST with JSON body)",
         }
     }

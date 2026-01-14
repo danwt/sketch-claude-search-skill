@@ -6,7 +6,11 @@ import os
 from openai import AsyncOpenAI
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-flash-1.5-8b")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemini-2.0-flash-lite-001")
+COMPRESSION_PROMPT = os.getenv(
+    "COMPRESSION_PROMPT",
+    "Process the following content according to the user's instruction. Preserve key facts, names, numbers, and actionable information. Output only the result, no preamble."
+)
 
 
 def get_client() -> AsyncOpenAI:
@@ -18,16 +22,17 @@ def get_client() -> AsyncOpenAI:
     )
 
 
-async def compress(content: str, max_tokens: int = 500) -> str:
+async def compress(content: str, instruction: str = "summarize briefly") -> str:
     """
-    Compress content using a cheap LLM via OpenRouter.
+    Compress/transform content using a cheap LLM via OpenRouter.
 
     Args:
-        content: The raw text to compress
-        max_tokens: Target output length
+        content: The raw text to process
+        instruction: Natural language instruction for how to process (e.g.,
+                     "brief summary", "detailed with all facts", "just urls and titles")
 
     Returns:
-        Compressed text summary
+        Processed text
 
     Raises:
         Exception if compression fails
@@ -39,14 +44,13 @@ async def compress(content: str, max_tokens: int = 500) -> str:
         messages=[
             {
                 "role": "system",
-                "content": f"Summarize the following content concisely. Target approximately {max_tokens} tokens. Preserve key facts, names, numbers, and actionable information. Output only the summary, no preamble."
+                "content": COMPRESSION_PROMPT
             },
             {
                 "role": "user",
-                "content": content
+                "content": f"Instruction: {instruction}\n\nContent:\n{content}"
             }
         ],
-        max_tokens=max_tokens + 100,  # Small buffer
     )
 
     return response.choices[0].message.content
