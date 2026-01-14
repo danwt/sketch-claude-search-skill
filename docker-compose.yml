@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # SearXNG Meta-Search Engine
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+      - ./searxng/limiter.toml:/etc/searxng/limiter.toml:ro
+    environment:
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-ultrasecretkey12345}
+      - BIND_ADDRESS=0.0.0.0:8080
+    restart: unless-stopped
+    networks:
+      - search-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    networks:
+      - search-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Crawl4AI Service
+  crawl4ai:
+    build:
+      context: ./crawl4ai-service
+      dockerfile: Dockerfile
+    container_name: crawl4ai-service
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+      - MAX_CONCURRENT_CRAWLS=5
+      - DEFAULT_TIMEOUT=30
+    volumes:
+      - playwright-cache:/ms-playwright
+    restart: unless-stopped
+    networks:
+      - search-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+networks:
+  search-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local
+  playwright-cache:
+    driver: local
